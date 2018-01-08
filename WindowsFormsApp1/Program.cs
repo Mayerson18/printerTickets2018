@@ -135,6 +135,60 @@ namespace WindowsFormsApp1
                     }
                 }
             }
+            else if (type == "bracelet")
+            {
+                Font bold_16 = new Font("Arial", 16, FontStyle.Bold);
+                SolidBrush drawBrush = new SolidBrush(Color.Black);
+                Font regular = new Font("Arial", 8, FontStyle.Regular);
+
+                int mm = 0;
+                var hijo = a.Children<JObject>().Properties().First();
+                if (hijo.Name == "width")
+                    mm = (int)hijo.Value;
+                float width = ((mm) * (0.039370F) * (100)) - 20;
+
+                foreach (JObject o2 in a.Children<JObject>())
+                {
+                    float x = 96F, y = 10, w = 960F, h = 0F;
+                    string text = (string)(o2["text"]);
+                    StringFormat center = new StringFormat();
+                    center.Alignment = StringAlignment.Center;
+                    //center.FormatFlags = StringFormatFlags.DirectionVertical;
+                    PrintDocument recordDoc = new PrintDocument();
+                    recordDoc.DocumentName = "Customer Receipt";
+                    recordDoc.PrintController = new StandardPrintController(); // hides status dialog popup
+                    PrinterSettings ps = new PrinterSettings();
+                    ps.PrinterName = nombre.Value.ToString();
+                    recordDoc.PrinterSettings = ps;
+                    recordDoc.PrintPage += (sender, args) => imprimir(ref args, width + text, bold_16, drawBrush, x, ref y, width, h, center);
+                    recordDoc.Print();
+                    recordDoc.Dispose();
+                }
+            }
+            else if (type == "credential")
+            {
+                int mm = 0;
+                var hijo = a.Children<JObject>().Properties().First();
+                if (hijo.Name == "width")
+                    mm = (int)hijo.Value;
+                //float width = 171;
+                float width = 215.433071F;
+                foreach (JObject o2 in a.Children<JObject>())
+                {
+                    StringFormat center = new StringFormat();
+                    center.Alignment = StringAlignment.Center;
+                    //center.FormatFlags = StringFormatFlags.DirectionVertical;
+                    PrintDocument recordDoc = new PrintDocument();
+                    recordDoc.DocumentName = "Customer Receipt";
+                    recordDoc.PrintController = new StandardPrintController(); // hides status dialog popup
+                    PrinterSettings ps = new PrinterSettings();
+                    ps.PrinterName = nombre.Value.ToString();
+                    recordDoc.PrinterSettings = ps;
+                    recordDoc.PrintPage += (sender, args) => PrintCredential(sender, args, o2, a, width);
+                    recordDoc.Print();
+                    recordDoc.Dispose();
+                }
+            }
             else if (type == "report")
             {
                 JArray header = JArray.Parse(a.Children<JObject>().Properties().FirstOrDefault(z => z.Name == "header").Value.ToString());
@@ -173,6 +227,59 @@ namespace WindowsFormsApp1
                 recordDoc.Dispose();
             }
         }
+
+        public static void PrintCredential(object sender, PrintPageEventArgs e, JObject obj, JArray a,float w)
+        {
+
+            float x = 0F, y = 10,height = 0F;
+            Font bold = new Font("Arial", 8, FontStyle.Bold);
+            Font bold_10 = new Font("Arial", 10, FontStyle.Bold);
+            Font bold_12 = new Font("Arial", 10, FontStyle.Bold);
+            Font bold_14 = new Font("Arial", 14, FontStyle.Bold);
+            Font bold_16 = new Font("Arial", 16, FontStyle.Bold);
+            SolidBrush drawBrush = new SolidBrush(Color.Black);
+            Font regular = new Font("Arial", 8, FontStyle.Regular);
+            Font regular_10 = new Font("Arial", 10, FontStyle.Regular);
+            Font regular_12 = new Font("Arial", 11, FontStyle.Regular);
+            Font regular_14 = new Font("Arial", 14, FontStyle.Regular);
+            Font regular_16 = new Font("Arial", 16, FontStyle.Regular);
+
+            StringFormat center = new StringFormat();
+            center.Alignment = StringAlignment.Center;
+            StringFormat left = new StringFormat();
+            left.Alignment = StringAlignment.Near;
+            StringFormat right = new StringFormat();
+            right.Alignment = StringAlignment.Far;
+            string name = (string)(obj["name"]);
+            string lastname = (string)(obj["lastname"]);
+            string ci = (string)(obj["ci"]);
+            string qrcode = (string)(obj["qr"]);
+            string zone = (string)(obj["zone"]);
+            string id = (string)(obj["id"]);
+            string company = (string)(obj["company"]);
+            
+            if (String.IsNullOrEmpty(qrcode))
+            {
+                qrcode = "ventickets.com";
+            }
+            QrEncoder qrEncoder = new QrEncoder(ErrorCorrectionLevel.H);
+            QrCode qrCode = new QrCode();
+            qrEncoder.TryEncode(qrcode, out qrCode);
+            GraphicsRenderer renderer = new GraphicsRenderer(new FixedCodeSize(100, QuietZoneModules.Zero), Brushes.Black, Brushes.White);
+            MemoryStream ms = new MemoryStream();
+
+            renderer.WriteToStream(qrCode.Matrix, ImageFormat.Png, ms);
+            var img_temp = new Bitmap(ms);
+            var qr = new Bitmap(img_temp, new Size(new Point(60, 60)));
+            e.Graphics.DrawImage(qr, new Rectangle((int)w-60, (int)Math.Ceiling(0.0F), 60, 60));
+            imprimir(ref e, name, regular_12, drawBrush, x, ref y, w, height, left);
+            imprimir(ref e, name, regular_12, drawBrush, x, ref y, w, height, left);
+            imprimir(ref e, "CI: " + ci, bold_12, drawBrush, x, ref y, w, height, left);
+            y += 10;
+            imprimir(ref e, zone + " - STAND 00" + id, bold, drawBrush, x, ref y, w, height, center);
+            imprimir(ref e, company, regular_12, drawBrush, x, ref y, w, height, center);
+        }
+
 
         public static Image DrawText(String text, Font font, Color textColor, Color backColor)
         {
